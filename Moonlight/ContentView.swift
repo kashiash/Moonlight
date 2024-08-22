@@ -12,21 +12,49 @@ struct ContentView: View {
     let astronauts: [String: Astronaut] = Bundle.main.decode("astronauts.json")
 
     let missions: [Mission] = Bundle.main.decode("missions.json")
-
+    let columns = [
+        GridItem(.adaptive(minimum: 150))
+    ]
     var body: some View {
-        Text(String(astronauts.count))
         NavigationStack {
-            NavigationLink {
-                Text("Detail View")
-                Image(.example)
-            } label: {
-                VStack {
-                    Text("This is the label")
-                    Text("So is this")
-                    Image(.example)
+            ScrollView {
+                LazyVGrid(columns: columns) {
+                    ForEach(missions) { mission in
+                        NavigationLink {
+                            Text("Detail view")
+                        } label: {
+                            VStack {
+                                Image(mission.image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 100, height: 100)
+                                    .padding()
+
+                                VStack {
+                                    Text(mission.displayName)
+                                        .font(.headline)
+                                        .foregroundStyle(.white)
+                                    Text(mission.formattedLaunchDate)
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.5))
+                                }
+                                .padding(.vertical)
+                                .frame(maxWidth: .infinity)
+                                .background(.lightBackground)
+                            }
+                            .clipShape(.rect(cornerRadius: 10))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(.lightBackground)
+                            )
+                        }
+                    }
                 }
-                .font(.largeTitle)
+                .padding([.horizontal, .bottom])
             }
+            .preferredColorScheme(.dark)
+            .navigationTitle("Moonshot")
+            .background(.darkBackground)
         }
     }
 }

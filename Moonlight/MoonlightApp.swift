@@ -13,5 +13,6 @@ struct MoonlightApp: App {
         WindowGroup {
             ContentView()
         }
+
     }
 }

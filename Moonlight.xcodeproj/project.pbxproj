@@ -16,6 +16,7 @@
 		762B8E232C77766D0082FC0D /* astronauts.json in Resources */ = {isa = PBXBuildFile; fileRef = 762B8E222C77766D0082FC0D /* astronauts.json */; };
 		762B8E252C7776780082FC0D /* missions.json in Resources */ = {isa = PBXBuildFile; fileRef = 762B8E242C7776770082FC0D /* missions.json */; };
 		762B8E272C77807B0082FC0D /* Mission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 762B8E262C77807B0082FC0D /* Mission.swift */; };
+		762B8E292C779F2B0082FC0D /* Color-Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 762B8E282C779F2B0082FC0D /* Color-Theme.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 		762B8E222C77766D0082FC0D /* astronauts.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = astronauts.json; sourceTree = "<group>"; };
 		762B8E242C7776770082FC0D /* missions.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = missions.json; sourceTree = "<group>"; };
 		762B8E262C77807B0082FC0D /* Mission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mission.swift; sourceTree = "<group>"; };
+		762B8E282C779F2B0082FC0D /* Color-Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color-Theme.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,6 +72,7 @@
 				762B8E162C7738D20082FC0D /* Preview Content */,
 				762B8E1E2C776D320082FC0D /* Astronaut.swift */,
 				762B8E202C776D550082FC0D /* Bundle-Decodable.swift */,
+				762B8E282C779F2B0082FC0D /* Color-Theme.swift */,
 				762B8E222C77766D0082FC0D /* astronauts.json */,
 				762B8E242C7776770082FC0D /* missions.json */,
 			);
@@ -157,6 +160,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				762B8E1F2C776D320082FC0D /* Astronaut.swift in Sources */,
+				762B8E292C779F2B0082FC0D /* Color-Theme.swift in Sources */,
 				762B8E122C7738D00082FC0D /* ContentView.swift in Sources */,
 				762B8E102C7738D00082FC0D /* MoonlightApp.swift in Sources */,
 				762B8E272C77807B0082FC0D /* Mission.swift in Sources */,
