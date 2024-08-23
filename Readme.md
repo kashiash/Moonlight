@@ -1089,8 +1089,14 @@ Możesz napotkać pewne trudności podczas stylizowania listy, ponieważ domyśl
 
 ### Moonshot: Realizacja wyzwań
 
-### Wyzwanie 1: Wyświetlanie daty startu
-Pierwszym wyzwaniem jest dodanie daty startu dla każdej misji, wyświetlanej poniżej emblematu misji w `MissionView`. To zadanie jest stosunkowo proste, ale wymaga formatowania daty w zależności od tego, jak chcesz, aby była wyświetlana.
+Certainly! Here's the translation of the text into Polish without removing any content:
+
+---
+
+### Moonshot: Rozwiązanie wyzwań
+
+#### Wyzwanie 1: Wyświetlanie dat startu
+Pierwsze wyzwanie to delikatne rozgrzewka: musimy dodać datę startu dla każdej misji, wyświetlaną poniżej emblematu misji w `MissionView`. To zadanie jest trochę bardziej skomplikowane, ponieważ nie wszystkie misje mają datę startu, ale także dlatego, że masz szansę na formatowanie daty w sposób, który ci odpowiada.
 
 Rozwiązanie:
 1. Otwórz plik `MissionView.swift`.
@@ -1100,11 +1106,12 @@ Rozwiązanie:
        Label(date.formatted(date: .complete, time: .omitted), systemImage: "calendar")
    }
    ```
+   Super!
 
-### Wyzwanie 2: Wyodrębnianie podwidoków
-Drugim wyzwaniem jest wyodrębnienie jednego lub dwóch fragmentów kodu widoku do nowych widoków SwiftUI. Dzięki temu kod stanie się bardziej zorganizowany i łatwiejszy do utrzymania.
+#### Wyzwanie 2: Wyodrębnianie podwidoków
+Drugim wyzwaniem było wyodrębnienie jednego lub dwóch fragmentów kodu widoku do nowych widoków SwiftUI. Ten projekt jest naprawdę idealny do podziału na mniejsze widoki, ponieważ zarówno `ContentView`, jak i `MissionView` są naprawdę duże.
 
-Rozwiązanie 1: Wyodrębnienie prostokątnego podzielnika.
+**Rozwiązanie 1: Wyodrębnienie prostokątnego podzielnika:**
 1. Stwórz nowy widok SwiftUI o nazwie `CustomDivider.swift`.
 2. Dodaj poniższy kod:
    ```swift
@@ -1117,9 +1124,9 @@ Rozwiązanie 1: Wyodrębnienie prostokątnego podzielnika.
        }
    }
    ```
-3. Teraz możesz zastąpić wszędzie tam, gdzie był używany prostokąt, wywołaniem `CustomDivider()`.
+3. Zastąp w `MissionView` wszystkie wystąpienia prostokąta z powyższymi modyfikatorami wywołaniem `CustomDivider()`.
 
-Rozwiązanie 2: Wyodrębnienie listy załogi.
+**Rozwiązanie 2: Wyodrębnienie listy załogi:**
 1. Stwórz nowy widok SwiftUI o nazwie `CrewRoster.swift`.
 2. Dodaj właściwość `crew`:
    ```swift
@@ -1141,7 +1148,7 @@ Rozwiązanie 2: Wyodrębnienie listy załogi.
                            .overlay(
                                Capsule()
                                    .strokeBorder(.white, lineWidth: 1)
-                           )
+                               )
    
                        VStack(alignment: .leading) {
                            Text(crewMember.astronaut.name)
@@ -1160,48 +1167,158 @@ Rozwiązanie 2: Wyodrębnienie listy załogi.
    ```
 4. W `MissionView` zastąp kod wywołaniem `CrewRoster(crew: crew)`.
 
-### Wyzwanie 3: Przełączanie między siatką a listą
-Najtrudniejsze wyzwanie polega na dodaniu elementu paska narzędzi do `ContentView`, który pozwoli przełączać się między wyświetlaniem misji jako siatki a listy.
+Końcowy wynik będzie identyczny pod względem układu, ale uprościliśmy `MissionView` i mamy teraz osobny widok `CrewRoster`, który można użyć w innych miejscach, jeśli zajdzie taka potrzeba – to duża wygrana.
 
-Rozwiązanie:
-1. Stwórz nowy widok SwiftUI o nazwie `GridLayout.swift` i przenieś tam cały kod siatki z `ContentView`.
-2. Stwórz nowy widok SwiftUI o nazwie `ListLayout.swift` i przenieś tam kod listy.
-3. W `ContentView` dodaj stan `@State` do śledzenia, który układ jest wyświetlany:
-   ```swift
-   @State private var showingGrid = true
-   ```
-4. Zaktualizuj `ContentView`, aby wyświetlał odpowiedni widok na podstawie stanu:
-   ```swift
-   Group {
-       if showingGrid {
-           GridLayout(astronauts: astronauts, missions: missions)
-       } else {
-           ListLayout(astronauts: astronauts, missions: missions)
-       }
-   }
-   ```
-5. Dodaj przycisk do paska narzędzi, który pozwoli przełączać się między widokami:
-   ```swift
-   .toolbar {
-       Button {
-           showingGrid.toggle()
-       } label: {
-           if showingGrid {
-               Label("Show as table", systemImage: "list.dash")
-           } else {
-               Label("Show as grid", systemImage: "square.grid.2x2")
-           }
-       }
-   }
-   ```
+### Wyzwanie 3: Przełączanie między listą a siatką
 
-### Bonus: Zapamiętywanie wyboru użytkownika
-Możesz ulepszyć aplikację, aby zapamiętywała, który widok użytkownik wolał – siatkę czy listę.
+Ostatnie wyzwanie było najtrudniejsze: dodanie elementu paska narzędzi do `ContentView`, który pozwala przełączać się między wyświetlaniem misji jako siatki lub listy. Istnieje kilka powodów, dla których było to trudne, ale jeśli rozłożysz to na małe części, staje się to bardziej osiągalne.
 
-Rozwiązanie:
-1. Zmień właściwość `showingGrid` na `@AppStorage`, aby wartość była automatycznie zapamiętywana:
-   ```swift
-   @AppStorage("showingGrid") private var showingGrid = true
-   ```
+**Krok 1: Przenieś kod siatki do nowego widoku**
 
-I to wszystko! Dzięki tym zmianom aplikacja będzie bardziej funkcjonalna i przyjazna dla użytkownika.
+Pierwszym krokiem, jaki bym podjął, jest rozpoznanie, że umieszczenie całego układu w `ContentView` sprawiłoby, że stałby się on zbyt duży i trudny do zarządzania. Dlatego zacząłbym od przeniesienia całego kodu siatki do nowego widoku, nazwanego na przykład `GridLayout` – ten widok potrzebowałby tych samych właściwości dla astronautów, misji i kolumn, co `ContentView`, ale nie musiałby ich ładować, ponieważ mogą one zostać przekazane.
+
+Oto kod startowy dla `GridLayout`:
+
+```swift
+struct GridLayout: View {
+    let astronauts: [String: Astronaut]
+    let missions: [Mission]
+
+    let columns = [
+        GridItem(.adaptive(minimum: 150))
+    ]
+}
+```
+
+Musisz dostarczyć domyślne wartości właściwości wewnątrz podglądu, ale tutaj znów przydaje się nasze rozszerzenie `decode()`:
+
+```swift
+#Preview {
+    GridLayout(astronauts: Bundle.main.decode("astronauts.json"), missions: Bundle.main.decode("missions.json"))
+        .preferredColorScheme(.dark)
+}
+```
+
+Po wykonaniu tej czynności możesz dosłownie przenieść cały kod `ScrollView` z `ContentView` do ciała `GridLayout` – kod nie musi się zmieniać.
+
+**Krok 2: Stwórz układ listy**
+
+Drugim krokiem byłoby stworzenie układu za pomocą listy, co oznacza stworzenie nowego widoku SwiftUI, który może przechowywać astronautów i misje.
+
+Stwórz nowy widok `ListLayout.swift`, a następnie dodaj do niego poniższy kod:
+
+```swift
+struct ListLayout: View {
+    let astronauts: [String: Astronaut]
+    let missions: [Mission]
+
+    var body: some View {
+        List(missions) { mission in
+            NavigationLink {
+                MissionView(mission: mission, astronauts: astronauts)
+            } label: {
+                HStack {
+                    Image(mission.image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 40, height: 40)
+                        .padding()
+
+                    VStack(alignment: .leading) {
+                        Text(mission.displayName)
+                            .font(.headline)
+                        Text(mission.formattedLaunchDate)
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+Upewnij się, że dostosujesz kod podglądu, aby wszystko się kompilowało:
+
+```swift
+#Preview {
+    ListLayout(astronauts: Bundle.main.decode("astronauts.json"), missions: Bundle.main.decode("missions.json"))
+        .preferredColorScheme(.dark)
+}
+```
+
+**Dostosowanie listy**
+
+Domyślnie listy w iOS mogą opierać się na standardowym stylu i trudno je dostosować, ale można to obejść za pomocą dwóch modyfikatorów, które pomogą nadać listom nieco osobistego charakteru.
+
+Najpierw możesz dostosować kolor wiersza listy, przypisując modyfikator `listRowBackground()` do wiersza. W naszym przypadku oznaczałoby to przypisanie go jako modyfikator do `NavigationLink`, jak poniżej:
+
+```swift
+.listRowBackground(Color.darkBackground)
+```
+
+Po drugie, możesz sprawić, że reszta listy przyjmie ten sam kolor tła, co nasza siatka, stosując styl `plain`. Dodaj ten kod na końcu listy:
+
+```swift
+.listStyle(.plain)
+```
+
+**Krok 3: Zaktualizuj `ContentView`**
+
+Teraz musimy zaktualizować `ContentView`, aby przełączał się między tymi dwoma układami. Oznacza to:
+
+- Dodanie pamięci `@State`, która śledzi, który typ widoku pokazujemy.
+- Wyświetlanie jednego z tych widoków w zależności od stanu programu.
+- Dołączenie paska narzędzi do obu widoków, wraz z tytułem nawigacji, kolorem tła i trybem ciemnym.
+
+Oto jak wygląda to w kodzie:
+
+```swift
+struct ContentView: View {
+    let astronauts: [String: Astronaut] = Bundle.main.decode("astronauts.json")
+    let missions: [Mission] = Bundle.main.decode("missions.json")
+
+    @State private var showingGrid = true
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if showingGrid {
+                    GridLayout(astronauts: astronauts, missions: missions)
+                } else {
+                    ListLayout(astronauts: astronauts, missions: missions)
+                }
+            }
+            .toolbar {
+                Button {
+                    showingGrid.toggle()
+                } label: {
+                    if showingGrid {
+                        Label("Show as table", systemImage: "list.dash")
+                    } else {
+                        Label("Show as grid", systemImage: "square.grid.2x2")
+                    }
+                }
+
+            }
+            .navigationTitle("Moonshot")
+            .background(.darkBackground)
+            .preferredColorScheme(.dark)
+        }
+    }
+}
+```
+
+Zauważ, że musieliśmy użyć widoku `Group`, aby mieć miejsce na dołączenie naszego paska narzędzi i innych modyfikatorów.
+
+**Bonus: Zapamiętywanie wyboru użytkownika**
+
+Chociaż pomyślnie wykonaliśmy wszystkie trzy wyzwania, jest jedna mała poprawka, którą bym zalecił: pozwolenie naszej aplikacji na zapamiętanie, który typ widoku użytkownik wolał – siatkę czy listę.
+
+To nie tylko przyjazna dla użytkownika zmiana – w końcu użytkownik powiedział, jak chce przeglądać dane, więc warto to zapamiętać – ale także bardzo łatwa do zakodowania. Idealne rozwiązanie!
+
+Aby nasza aplikacja zapamiętała, czy domyślnie pokazywać widok siatki, czy listy, zmień właściwość `showingGrid` z `@State` na `@AppStorage`, jak poniżej:
+
+```swift
+@AppStorage("showingGrid") private var showingGrid = true
+```
+
+To wszystko – świetnie!
