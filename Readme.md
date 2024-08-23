@@ -810,3 +810,398 @@ Aby dokończyć projekt tego widoku, dodaj ten ostatni modyfikator do `ScrollVie
 ```
 
 Jeśli teraz uruchomisz aplikację, zobaczysz, że mamy pięknie przewijającą się siatkę danych misji, która płynnie dostosowuje się do szerokiego zakresu rozmiarów urządzeń, mamy jasnobiały tekst nawigacyjny i ciemne tło nawigacyjne niezależnie od włączonego wyglądu, a dotknięcie którejkolwiek z naszych misji wyświetli tymczasowy widok szczegółów. Świetny początek!
+
+
+
+# Wyświetlanie szczegółów misji za pomocą ScrollView i containerRelativeFrame()
+
+Gdy użytkownik wybierze jedną z misji Apollo z naszej głównej listy, chcemy wyświetlić informacje o tej misji: jej odznakę, opis misji oraz wszystkich astronautów, którzy brali udział w misji, wraz z ich rolami. Pierwsze dwa elementy nie są trudne, ale trzeci wymaga trochę więcej pracy, ponieważ musimy dopasować identyfikatory załogi do szczegółów załogi z naszych dwóch plików JSON.
+
+Zacznijmy od prostych rzeczy i stopniowo dodawajmy więcej: utwórz nowy widok SwiftUI o nazwie `MissionView.swift`. Początkowo będzie on miał tylko właściwość `mission`, abyśmy mogli wyświetlić odznakę misji i opis, ale wkrótce dodamy do tego więcej elementów.
+
+Jeśli chodzi o układ, ten widok powinien mieć przewijany `VStack` z obrazem odznaki misji, który można zmieniać rozmiar, a następnie widok tekstowy. Użyjemy `containerRelativeFrame()`, aby ustawić szerokość obrazu misji – po pewnych próbach i błędach stwierdziłem, że odznaka misji najlepiej wyglądała, gdy nie była na pełnej szerokości – najlepiej wyglądało to, gdy miała od 50% do 70% szerokości, aby uniknąć zbyt dużego rozmiaru na ekranie.
+
+Wstaw ten kod do pliku `MissionView.swift`:
+
+```swift
+struct MissionView: View {
+    let mission: Mission
+
+    var body: some View {
+        ScrollView {
+            VStack {
+                Image(mission.image)
+                    .resizable()
+                    .scaledToFit()
+                    .containerRelativeFrame(.horizontal) { width, axis in
+                        width * 0.6
+                    }
+                    .padding(.top)
+
+                VStack(alignment: .leading) {
+                    Text("Mission Highlights")
+                        .font(.title.bold())
+                        .padding(.bottom, 5)
+
+                    Text(mission.description)
+                }
+                .padding(.horizontal)
+            }
+            .padding(.bottom)
+        }
+        .navigationTitle(mission.displayName)
+        .navigationBarTitleDisplayMode(.inline)
+        .background(.darkBackground)
+    }
+}
+```
+
+Umieszczenie `VStack` wewnątrz innego `VStack` pozwala nam kontrolować wyrównanie dla jednej konkretnej części naszego widoku – nasz główny obraz misji może być wyśrodkowany, podczas gdy szczegóły misji mogą być wyrównane do lewej krawędzi.
+
+Z nowym widokiem w miejscu kod nie będzie się kompilował, wszystko z powodu struktury `#Preview` poniżej, która potrzebuje obiektu `Mission`, aby miała co renderować. Na szczęście nasze rozszerzenie `Bundle` jest tutaj również dostępne:
+
+```swift
+#Preview {
+    let missions: [Mission] = Bundle.main.decode("missions.json")
+
+    return MissionView(mission: missions[0])
+        .preferredColorScheme(.dark)
+}
+```
+
+**Wskazówka:** Ten widok automatycznie będzie miał ciemny schemat kolorów, ponieważ jest stosowany do `NavigationStack` w `ContentView`, ale podgląd `MissionView` tego nie wie, więc musimy to włączyć ręcznie.
+
+Jeśli spojrzysz w podgląd, zobaczysz, że to dobry początek, ale następna część jest trudniejsza: chcemy wyświetlić listę astronautów, którzy brali udział w misji, poniżej opisu. Zajmijmy się tym w kolejnym kroku.
+
+# Łączenie struktur Codable
+
+Pod naszą misją chcemy wyświetlić zdjęcia, nazwiska i role każdego członka załogi, co oznacza dopasowanie danych, które pochodzą z dwóch różnych plików JSON.
+
+Jak pamiętacie, nasze dane JSON są podzielone na `missions.json` i `astronauts.json`. Eliminuje to duplikację w naszych danych, ponieważ niektórzy astronauci brali udział w wielu misjach, ale oznacza to również, że musimy napisać kod, który połączy nasze dane – na przykład, aby "armstrong" zamienić na "Neil A. Armstrong". Z jednej strony mamy misje, które wiedzą, że członek załogi "armstrong" miał rolę "Commander", ale nie mają pojęcia, kim jest "armstrong", a z drugiej strony mamy "Neil A. Armstrong" i opis jego osoby, ale bez informacji, że był on dowódcą na Apollo 11.
+
+Co musimy zrobić, to sprawić, by nasz `MissionView` akceptował misję, którą wybrano, wraz z pełnym słownikiem astronautów, a następnie ustalić, którzy astronauci faktycznie brali udział w misji.
+
+Dodaj teraz tę zagnieżdżoną strukturę wewnątrz `MissionView`:
+
+```swift
+struct CrewMember {
+    let role: String
+    let astronaut: Astronaut
+}
+```
+
+Teraz nadchodzi trudniejsza część: musimy dodać właściwość do `MissionView`, która przechowuje tablicę obiektów `CrewMember` – są to w pełni rozstrzygnięte pary rola/astronauta. Początkowo jest to proste dodanie kolejnej właściwości:
+
+```swift
+let crew: [CrewMember]
+```
+
+Ale jak ustawić tę właściwość? Pomyśl o tym: jeśli przekażemy tej widokowi jego misję i wszystkich astronautów, możemy przejść przez załogę misji, a następnie dla każdego członka załogi poszukać w słowniku tego, który ma pasujące ID. Kiedy znajdziemy odpowiedniego astronautę, możemy zamienić go i jego rolę na obiekt `CrewMember`, ale jeśli go nie znajdziemy, oznacza to, że w jakiś sposób mamy rolę załogi z nieprawidłowym lub nieznanym imieniem.
+
+Ten ostatni przypadek nie powinien się nigdy zdarzyć. Aby być jasnym, jeśli dodasz jakieś dane JSON do swojego projektu, które wskazują na brakujące dane w twojej aplikacji, popełniłeś fundamentalny błąd – to nie jest coś, na co powinieneś pisać obsługę błędów w czasie wykonania, ponieważ nie powinno się to zdarzyć w pierwszej kolejności. Dlatego jest to świetny przykład, gdzie użycie `fatalError()` jest przydatne: jeśli nie możemy znaleźć astronauty za pomocą jego ID, powinniśmy natychmiast wyjść i głośno narzekać.
+
+Zamieńmy to wszystko na kod, używając niestandardowego inicjalizatora dla `MissionView`. Jak powiedziałem, będzie on akceptował misję, którą reprezentuje, wraz ze wszystkimi astronautami, a jego zadaniem jest zapisanie misji, a następnie ustalenie tablicy rozstrzygniętych astronautów.
+
+Oto kod:
+
+```swift
+init(mission: Mission, astronauts: [String: Astronaut]) {
+    self.mission = mission
+
+    self.crew = mission.crew.map { member in
+        if let astronaut = astronauts[member.name] {
+            return CrewMember(role: member.role, astronaut: astronaut)
+        } else {
+            fatalError("Missing \(member.name)")
+        }
+    }
+}
+```
+
+Jak tylko ten kod zostanie dodany, nasza struktura `#Preview` przestanie działać, ponieważ potrzebuje więcej informacji. Dodaj więc drugie wywołanie `decode()` tam, aby załadowało wszystkich astronautów i przekaż ich również:
+
+```swift
+#Preview {
+    let missions: [Mission] = Bundle.main.decode("missions.json")
+    let astronauts: [String: Astronaut] = Bundle.main.decode("astronauts.json")
+
+    return MissionView(mission: missions[0], astronauts: astronauts)
+        .preferredColorScheme(.dark)
+}
+```
+
+Teraz, gdy mamy wszystkie nasze dane astronautów, możemy wyświetlić je bezpośrednio pod opisem misji, używając poziomego `ScrollView`. Dodamy również nieco więcej stylizacji do zdjęć astronautów, aby wyglądały lepiej, używając kształtu kapsuły (`capsule`) oraz obramowania (`overlay`).
+
+Dodaj ten kod tuż po `VStack(alignment: .leading)`:
+
+```swift
+ScrollView(.horizontal, showsIndicators: false) {
+    HStack {
+        ForEach(crew, id: \.role) { crewMember in
+            NavigationLink {
+                Text("Astronaut details")
+            } label: {
+                HStack {
+                    Image(crewMember.astronaut.id)
+                        .resizable()
+                        .frame(width: 104, height: 72)
+                        .clipShape(.capsule)
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(.white, lineWidth: 1)
+                        )
+
+                    VStack(alignment: .leading) {
+                        Text(crewMember.astronaut.name)
+                            .foregroundStyle(.white)
+                            .font(.headline)
+                        Text(crewMember.role)
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+}
+```
+
+Dlaczego po `VStack`, a nie wewnątrz? Ponieważ widoki przewijania działają najlepiej, gdy w pełni wykorzystują dostępną przestrzeń ekranu, co oznacza, że powinny przewijać się od krawędzi do krawędzi. Gdybyśmy umieścili to wewnątrz naszego `VStack`, miałoby to takie samo wcięcie jak reszta naszego tekstu, co oznacza, że przewijanie działałoby dziwnie – załoga byłaby przycinana, gdyby dotarła do lewej krawędzi naszego `VStack`, co wyglądałoby dziwnie.
+
+Zaraz sprawimy, że `NavigationLink` będzie robił coś bardziej użytecznego, ale najpierw musimy zmodyfikować `NavigationLink` w `ContentView` – obecnie przesuwa się do `Text("Detail View")`, ale zamień to na:
+
+```swift
+MissionView(mission: mission, astronauts: astronauts)
+```
+
+Teraz uruchom aplikację w symulatorze – zaczyna być użyteczna!
+
+Zanim przejdziesz dalej, spróbuj spędzić kilka minut na dostosowywaniu sposobu, w jaki wyświetlani są astronauci – użyłem kształtu kapsuły i obramowania, ale możesz spróbować okręgów lub zaokrąglonych prostokątów, możesz użyć różnych czcionek lub większych obrazów, a nawet dodać sposób oznaczania, kto był dowódcą misji.
+
+W moim projekcie uważam, że warto dodać trochę wizualnego oddzielenia w naszym widoku misji, aby odznaka misji, opis i załoga były wyraźnie rozdzielone.
+
+SwiftUI oferuje dedykowany widok `Divider` do tworzenia wizualnego podziału w twoim układzie, ale nie jest on konfigurowalny – to zawsze tylko cienka linia. Dlatego, aby uzyskać coś bardziej przydatnego, narysuję niestandardowy podział, aby rozbić nasz widok.
+
+Najpierw umieść to bezpośrednio przed tekstem "Mission Highlights":
+
+```swift
+Rectangle()
+    .frame(height: 2)
+    .foregroundStyle(.lightBackground)
+    .padding(.vertical)
+```
+
+Teraz umieść kolejny taki sam podział – ten sam kod – bezpośrednio po tekście `mission.description`. O wiele lepiej!
+
+Aby zakończyć ten widok, dodam tytuł przed naszą załogą, ale trzeba to zrobić ostrożnie. Widzisz, mimo że dotyczy to widoku przewijania, musi mieć takie samo wcięcie jak reszta naszego tekstu. Więc najlepsze miejsce na to jest wewnątrz `VStack`, bezpośrednio po poprzednim prostokącie:
+
+```swift
+Text("Crew")
+    .font(.title.bold())
+    .padding(.bottom, 5)
+```
+
+Nie musisz go tam umieszczać – jeśli chcesz, możemy przenieść to poza `VStack`, a następnie zastosować wcięcie indywidualnie do tego widoku tekstowego. Jeśli jednak to zrobisz, upewnij się, że zastosujesz takie samo wcięcie, aby wszystko było ładnie wyrównane.
+
+# Zakończenie z ostatnim widokiem
+
+Aby zakończyć ten program, stworzymy trzeci i ostatni widok, który wyświetli szczegóły astronauty. Będzie on osiągany przez stuknięcie jednego z astronautów w widoku misji. To powinno być dla Ciebie głównie ćwiczenie, ale mam nadzieję, że pokaże Ci również, jak ważny jest `NavigationStack` – wchodzimy głębiej w informacje naszej aplikacji, a prezentacja widoków, które przesuwają się i znikają, naprawdę uświadamia to użytkownikowi.
+
+Zacznij od stworzenia nowego widoku SwiftUI o nazwie `AstronautView`. Będzie on miał pojedynczą właściwość `Astronaut`, dzięki czemu będzie wiedział, co wyświetlić, a następnie zostanie on ułożony przy użyciu podobnej kombinacji `ScrollView/VStack`, jaką mieliśmy w `MissionView`. Dodaj ten kod:
+
+```swift
+struct AstronautView: View {
+    let astronaut: Astronaut
+
+    var body: some View {
+        ScrollView {
+            VStack {
+                Image(astronaut.id)
+                    .resizable()
+                    .scaledToFit()
+
+                Text(astronaut.description)
+                    .padding()
+            }
+        }
+        .background(.darkBackground)
+        .navigationTitle(astronaut.name)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+```
+
+Ponownie musimy zaktualizować podgląd, aby tworzył widok z danymi:
+
+```swift
+#Preview {
+    let astronauts: [String: Astronaut] = Bundle.main.decode("astronauts.json")
+
+    return AstronautView(astronaut: astronauts["aldrin"]!)
+        .preferredColorScheme(.dark)
+}
+```
+
+Teraz możemy wyświetlić ten widok z `NavigationLink` w `MissionView`. Obecnie wskazuje on na `Text("Astronaut details")`, ale możemy zaktualizować go, aby wskazywał na nasz nowy `AstronautView`:
+
+```swift
+AstronautView(astronaut: crewMember.astronaut)
+```
+
+To było łatwe, prawda? Ale jeśli teraz uruchomisz aplikację, zobaczysz, jak naturalnie wygląda nasz interfejs użytkownika – zaczynamy od najszerszego poziomu informacji, pokazując wszystkie nasze misje, a następnie stukamy, aby wybrać jedną konkretną misję, a następnie stukamy, aby wybrać jednego konkretnego astronautę. iOS automatycznie animuje wprowadzenie nowych widoków, ale także zapewnia przyciski wstecz i przesunięcia, aby wrócić do poprzednich widoków.
+
+# Podsumowanie projektu Moonshot
+
+Paul Hudson @twostraws 1 listopada 2023
+
+Ta aplikacja jest najbardziej złożoną, jaką dotychczas zbudowaliśmy. Oprócz kilku widoków, odeszliśmy od list i formularzy, przechodząc do własnych układów przewijanych, używając `containerRelativeFrame()`, aby uzyskać precyzyjne rozmiary i maksymalnie wykorzystać dostępną przestrzeń.
+
+Ale to także najtrudniejszy kod Swift, jaki napisaliśmy do tej pory – generics są niesamowicie potężną funkcją, a gdy dodasz ograniczenia, otwierasz ogromne możliwości, które pozwalają zaoszczędzić czas, jednocześnie zyskując elastyczność.
+
+Teraz zaczynasz również dostrzegać, jak użyteczny jest `Codable`: jego zdolność do dekodowania hierarchii danych za jednym zamachem jest nieoceniona, dlatego jest centralnym elementem tak wielu aplikacji napisanych w Swift.
+
+## Przegląd tego, czego się nauczyłeś
+Każdy może przejść przez tutorial, ale potrzeba prawdziwej pracy, aby zapamiętać to, czego się nauczyło. Moim zadaniem jest upewnienie się, że wyniesiesz z tych tutoriali jak najwięcej, więc przygotowałem krótkie podsumowanie, które pomoże Ci sprawdzić, co zapamiętałeś.
+
+Kliknij tutaj, aby przejrzeć, czego nauczyłeś się w tym projekcie.
+
+## Wyzwanie
+Jednym z najlepszych sposobów nauki jest jak najczęstsze pisanie własnego kodu, więc oto trzy sposoby, w jakie powinieneś spróbować rozszerzyć tę aplikację, aby upewnić się, że w pełni rozumiesz, o co chodzi.
+
+1. Dodaj datę startu do `MissionView`, poniżej emblematu misji. Możesz wybrać inne formatowanie, biorąc pod uwagę, że dostępne jest więcej miejsca, ale to zależy od Ciebie.
+2. Wyodrębnij jeden lub dwa fragmenty kodu widoku do nowych widoków SwiftUI – poziomy widok przewijania w `MissionView` jest doskonałym kandydatem, ale jeśli podążałeś za moim stylizowaniem, możesz także przenieść prostokątne podzielniki.
+3. Dla bardziej zaawansowanego wyzwania dodaj element paska narzędzi do `ContentView`, który przełącza między wyświetlaniem misji jako siatki a listą.
+
+**Wskazówka:** W przypadku ostatniego wyzwania najlepiej jest podzielić cały kod siatki i kod listy na dwa osobne widoki i przełączać się między nimi, używając warunku `if` w `ContentView`. Nie możesz dołączyć modyfikatorów SwiftUI do warunku `if`, ale możesz owinąć ten warunek w `Group`, a następnie dołączyć modyfikatory do tego `Group`, jak poniżej:
+
+```swift
+Group {
+    if showingGrid {
+        GridLayout(astronauts: astronauts, missions: missions)
+    } else {
+        ListLayout(astronauts: astronauts, missions: missions)
+    }
+}
+.navigationTitle("My Group")
+```
+
+Możesz napotkać pewne trudności podczas stylizowania listy, ponieważ domyślnie mają one specyficzny wygląd na iOS. Spróbuj dołączyć `.listStyle(.plain)` do swojej listy, a następnie coś w rodzaju `.listRowBackground(Color.darkBackground)` do zawartości wiersza listy – to powinno znacznie przybliżyć Cię do celu.
+
+### Moonshot: Realizacja wyzwań
+
+### Wyzwanie 1: Wyświetlanie daty startu
+Pierwszym wyzwaniem jest dodanie daty startu dla każdej misji, wyświetlanej poniżej emblematu misji w `MissionView`. To zadanie jest stosunkowo proste, ale wymaga formatowania daty w zależności od tego, jak chcesz, aby była wyświetlana.
+
+Rozwiązanie:
+1. Otwórz plik `MissionView.swift`.
+2. Dodaj poniższy kod pod emblematem misji, aby wyświetlić datę startu, jeśli jest dostępna:
+   ```swift
+   if let date = mission.launchDate {
+       Label(date.formatted(date: .complete, time: .omitted), systemImage: "calendar")
+   }
+   ```
+
+### Wyzwanie 2: Wyodrębnianie podwidoków
+Drugim wyzwaniem jest wyodrębnienie jednego lub dwóch fragmentów kodu widoku do nowych widoków SwiftUI. Dzięki temu kod stanie się bardziej zorganizowany i łatwiejszy do utrzymania.
+
+Rozwiązanie 1: Wyodrębnienie prostokątnego podzielnika.
+1. Stwórz nowy widok SwiftUI o nazwie `CustomDivider.swift`.
+2. Dodaj poniższy kod:
+   ```swift
+   struct CustomDivider: View {
+       var body: some View {
+           Rectangle()
+               .frame(height: 2)
+               .foregroundStyle(.lightBackground)
+               .padding(.vertical)
+       }
+   }
+   ```
+3. Teraz możesz zastąpić wszędzie tam, gdzie był używany prostokąt, wywołaniem `CustomDivider()`.
+
+Rozwiązanie 2: Wyodrębnienie listy załogi.
+1. Stwórz nowy widok SwiftUI o nazwie `CrewRoster.swift`.
+2. Dodaj właściwość `crew`:
+   ```swift
+   let crew: [MissionView.CrewMember]
+   ```
+3. Przenieś cały kod poziomego `ScrollView` do ciała nowego widoku:
+   ```swift
+   ScrollView(.horizontal, showsIndicators: false) {
+       HStack {
+           ForEach(crew, id: \.role) { crewMember in
+               NavigationLink {
+                   AstronautView(astronaut: crewMember.astronaut)
+               } label: {
+                   HStack {
+                       Image(crewMember.astronaut.id)
+                           .resizable()
+                           .frame(width: 104, height: 72)
+                           .clipShape(.capsule)
+                           .overlay(
+                               Capsule()
+                                   .strokeBorder(.white, lineWidth: 1)
+                           )
+   
+                       VStack(alignment: .leading) {
+                           Text(crewMember.astronaut.name)
+                               .foregroundStyle(.white)
+                               .font(.headline)
+   
+                           Text(crewMember.role)
+                               .foregroundStyle(.white.opacity(0.5))
+                       }
+                   }
+                   .padding(.horizontal)
+               }
+           }
+       }
+   }
+   ```
+4. W `MissionView` zastąp kod wywołaniem `CrewRoster(crew: crew)`.
+
+### Wyzwanie 3: Przełączanie między siatką a listą
+Najtrudniejsze wyzwanie polega na dodaniu elementu paska narzędzi do `ContentView`, który pozwoli przełączać się między wyświetlaniem misji jako siatki a listy.
+
+Rozwiązanie:
+1. Stwórz nowy widok SwiftUI o nazwie `GridLayout.swift` i przenieś tam cały kod siatki z `ContentView`.
+2. Stwórz nowy widok SwiftUI o nazwie `ListLayout.swift` i przenieś tam kod listy.
+3. W `ContentView` dodaj stan `@State` do śledzenia, który układ jest wyświetlany:
+   ```swift
+   @State private var showingGrid = true
+   ```
+4. Zaktualizuj `ContentView`, aby wyświetlał odpowiedni widok na podstawie stanu:
+   ```swift
+   Group {
+       if showingGrid {
+           GridLayout(astronauts: astronauts, missions: missions)
+       } else {
+           ListLayout(astronauts: astronauts, missions: missions)
+       }
+   }
+   ```
+5. Dodaj przycisk do paska narzędzi, który pozwoli przełączać się między widokami:
+   ```swift
+   .toolbar {
+       Button {
+           showingGrid.toggle()
+       } label: {
+           if showingGrid {
+               Label("Show as table", systemImage: "list.dash")
+           } else {
+               Label("Show as grid", systemImage: "square.grid.2x2")
+           }
+       }
+   }
+   ```
+
+### Bonus: Zapamiętywanie wyboru użytkownika
+Możesz ulepszyć aplikację, aby zapamiętywała, który widok użytkownik wolał – siatkę czy listę.
+
+Rozwiązanie:
+1. Zmień właściwość `showingGrid` na `@AppStorage`, aby wartość była automatycznie zapamiętywana:
+   ```swift
+   @AppStorage("showingGrid") private var showingGrid = true
+   ```
+
+I to wszystko! Dzięki tym zmianom aplikacja będzie bardziej funkcjonalna i przyjazna dla użytkownika.
